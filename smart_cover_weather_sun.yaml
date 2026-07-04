@@ -257,6 +257,13 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
 
+variables:
+  enable_morning: !input enable_morning
+  enable_evening: !input enable_evening
+  enable_quiet_mode: !input enable_quiet_mode
+  quiet_start: !input quiet_start
+  quiet_end: !input quiet_end
+
 trigger:
   - platform: time
     at: !input morning_time
@@ -266,23 +273,30 @@ trigger:
     id: evening
 
 condition:
-  - condition: not
-    conditions:
-      - condition: state
-        entity_id: !input enable_quiet_mode
-        state: "on"
-      - condition: time
-        after: !input quiet_start
-        before: !input quiet_end
+  - condition: template
+    value_template: >-
+      {% if not enable_quiet_mode %}
+        true
+      {% else %}
+        {% set n = now() %}
+        {% set start = today_at(quiet_start) %}
+        {% set end = today_at(quiet_end) %}
+        {% if end <= start %}
+          {% set end = end + timedelta(days=1) %}
+        {% endif %}
+        {% if n < start %}
+          {% set n = n + timedelta(days=1) %}
+        {% endif %}
+        {{ n < start or n > end }}
+      {% endif %}
 
 action:
   - choose:
       - conditions:
           - condition: trigger
             id: morning
-          - condition: state
-            entity_id: !input enable_morning
-            state: "on"
+          - condition: template
+            value_template: "{{ enable_morning }}"
         sequence:
           - variables:
               covers: !input covers
@@ -362,9 +376,8 @@ action:
       - conditions:
           - condition: trigger
             id: evening
-          - condition: state
-            entity_id: !input enable_evening
-            state: "on"
+          - condition: template
+            value_template: "{{ enable_evening }}"
         sequence:
           - variables:
               covers: !input covers
