@@ -264,9 +264,16 @@ trigger:
   - platform: sun
     event: sunset
     id: evening
-    enabled: !input enable_evening
 
-condition: []
+condition:
+  - condition: not
+    conditions:
+      - condition: state
+        entity_id: !input enable_quiet_mode
+        state: "on"
+      - condition: time
+        after: !input quiet_start
+        before: !input quiet_end
 
 action:
   - choose:
@@ -277,15 +284,6 @@ action:
             entity_id: !input enable_morning
             state: "on"
         sequence:
-          - if:
-              - condition: state
-                entity_id: !input enable_quiet_mode
-                state: "on"
-              - condition: time
-                after: !input quiet_start
-                before: !input quiet_end
-            then:
-              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               weather: !input weather_entity
@@ -299,6 +297,7 @@ action:
               pos_sunny_out: !input position_sunny_outside_angle
               pos_cloudy: !input position_cloudy
               invert: !input invert_positions
+              debug_mode: !input debug_mode
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
               temp: >
@@ -332,9 +331,8 @@ action:
                   {{ target_position }}
                 {% endif %}
           - if:
-              - condition: state
-                entity_id: !input debug_mode
-                state: "on"
+              - condition: template
+                value_template: "{{ debug_mode }}"
             then:
               - service: persistent_notification.create
                 data:
@@ -368,19 +366,11 @@ action:
             entity_id: !input enable_evening
             state: "on"
         sequence:
-          - if:
-              - condition: state
-                entity_id: !input enable_quiet_mode
-                state: "on"
-              - condition: time
-                after: !input quiet_start
-                before: !input quiet_end
-            then:
-              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               evening_pos: !input evening_position
               invert: !input invert_positions
+              debug_mode: !input debug_mode
               final_evening_pos: >
                 {% if invert %}
                   {{ 100 - (evening_pos | int) }}
@@ -388,9 +378,8 @@ action:
                   {{ evening_pos }}
                 {% endif %}
           - if:
-              - condition: state
-                entity_id: !input debug_mode
-                state: "on"
+              - condition: template
+                value_template: "{{ debug_mode }}"
             then:
               - service: persistent_notification.create
                 data:
