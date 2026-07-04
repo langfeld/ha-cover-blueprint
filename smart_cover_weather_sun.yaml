@@ -368,7 +368,7 @@ trigger:
     minutes: "/30"
     id: reevaluate_30
   - platform: time_pattern
-    minutes: "/60"
+    hours: "/1"
     id: reevaluate_60
   - platform: sun
     event: sunset
