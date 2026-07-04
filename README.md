@@ -232,6 +232,7 @@ Bevor du die Rollläden wirklich fahren lässt, kannst du den **Debug-Modus** ei
 
 Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benachrichtigung in Home Assistant mit folgenden Informationen:
 
+- den auslösenden Trigger (Morgen, Intervall oder Abend)
 - die geplante Position
 - die betroffenen Rollläden
 - die aktuelle durchschnittliche Position
@@ -243,6 +244,8 @@ Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benach
 - ob die Sonne im relevanten Winkel steht
 
 So kannst du prüfen, ob die Automation das richtige Ergebnis liefert, bevor du sie aktiv nutzt. Die Benachrichtigung zeigt dabei auch an, ob die Positionen gerade invertiert wurden.
+
+**Hinweis:** Der Morgen-Trigger und der Intervall-Check verwenden dieselbe Berechnungslogik. Der einzige Unterschied ist der Zeitpunkt der Ausführung.
 
 **Hinweis:** Wenn du den Debug-Modus manuell testest (indem du die Automation manuell ausführst), muss der entsprechende Schalter (z. B. **„Morgens aktivieren“** oder **„Abends aktivieren“**) eingeschaltet sein. Über **„Manueller Test-Modus“** wählst du aus, welcher Teil simuliert werden soll:
 

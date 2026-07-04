@@ -66,40 +66,6 @@ blueprint:
       default: true
       selector:
         boolean: {}
-    manual_trigger_mode:
-      name: "🧪 Manueller Test-Modus"
-      description: >
-        Wenn du die Automation manuell ausführst, wird dieser Wert als
-        simulierter Trigger verwendet. So kannst du den Morgen-Teil, den
-        Intervall-Check oder den Abend-Teil testen. Bei normaler Automation
-        (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert
-        ignoriert.
-      default: "morning"
-      selector:
-        select:
-          options:
-            - label: "🌅 Morgens"
-              value: "morning"
-            - label: "🔄 Neubewertung (Intervall)"
-              value: "reevaluate"
-            - label: "🌙 Abends"
-              value: "evening"
-          multiple: false
-          mode: dropdown
-    debug_mode:
-      name: "🐞 Debug-Modus"
-      description: >
-        Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
-        Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
-        erstellt. Ideal zum Testen, bevor die Rollläden wirklich fahren.
-
-        Hinweis: Wenn du den Debug-Modus manuell testest, muss der entsprechende
-        Schalter (z. B. „🌄 Morgens aktivieren“ oder „🌇 Abends aktivieren“)
-        eingeschaltet sein. Über „🧪 Manueller Test-Modus“ wählst du aus, welcher
-        Teil simuliert wird.
-      default: false
-      selector:
-        boolean: {}
     invert_positions:
       name: "🔄 Positionen umkehren"
       description: >
@@ -373,6 +339,42 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
 
+    manual_trigger_mode:
+      name: "🧪 Manueller Test-Modus"
+      description: >
+        Wenn du die Automation manuell ausführst, wird dieser Wert als
+        simulierter Trigger verwendet. So kannst du den Morgen-Teil, den
+        Intervall-Check oder den Abend-Teil testen. Bei normaler Automation
+        (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert
+        ignoriert.
+      default: "morning"
+      selector:
+        select:
+          options:
+            - label: "🌅 Morgens"
+              value: "morning"
+            - label: "🔄 Neubewertung (Intervall)"
+              value: "reevaluate"
+            - label: "🌙 Abends"
+              value: "evening"
+          multiple: false
+          mode: dropdown
+
+    debug_mode:
+      name: "🐞 Debug-Modus"
+      description: >
+        Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
+        Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
+        erstellt. Ideal zum Testen, bevor die Rollläden wirklich fahren.
+
+        Hinweis: Wenn du den Debug-Modus manuell testest, muss der entsprechende
+        Schalter (z. B. „🌄 Morgens aktivieren“ oder „🌇 Abends aktivieren“)
+        eingeschaltet sein. Über „🧪 Manueller Test-Modus“ wählst du aus, welcher
+        Teil simuliert wird.
+      default: false
+      selector:
+        boolean: {}
+
 variables:
   enable_morning: !input enable_morning
   enable_evening: !input enable_evening
@@ -500,15 +502,16 @@ action:
             then:
               - service: persistent_notification.create
                 data:
-                  title: "Rollladen-Blueprint: Debug Morgens"
+                  title: "Rollladen-Blueprint: Debug Tages-Positionierung"
                   message: >
+                    Auslöser: {{ trigger.id | default('manual') }}
+
                     Geplante Position: {{ final_position }}%
                     (Berechnet: {{ target_position }}%, invertiert: {{ invert }})
 
                     Rollläden: {{ covers | join(', ') }}
                     Aktuelle durchschnittliche Position: {{ avg_current_position }}%
                     Bewegung nötig: {{ should_move }}
-                    Auslöser: {{ trigger.id | default('manual') }}
 
                     Auswertung:
                     - Azimuth: {{ azimuth }}°
