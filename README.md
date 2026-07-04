@@ -4,7 +4,8 @@ Dieser Blueprint steuert deine Rollläden automatisch nach Wettervorhersage und 
 
 - **Morgens** fahren die Rollläden zu einer festen Uhrzeit hoch.
 - Je nach Wetter, Temperatur und Sonnenposition wird eine passende Höhe gewählt.
-- **Abends** werden die Rollläden bei Sonnenuntergang heruntergefahren.
+- **Abends** werden die Rollläden bei Sonnenuntergang geschlossen.
+- Im **Ruhemodus** kannst du einen Zeitraum festlegen, in dem die Rollläden nicht bewegt werden.
 - Dank des **Debug-Modus** kannst du erst testen, ohne dass sich die Rollläden wirklich bewegen.
 
 ---
@@ -122,12 +123,34 @@ Standardmäßig sind die meisten nicht-sonnigen Zustände ausgewählt.
 
 ### Positionen
 
-- **Position bei Sonne im Winkel & warm:** Die Position, wenn die Sonne auf das Fenster scheint und es warm genug ist. Das ist deine Sonnenschutz-Position.
-- **Position bei Sonne außerhalb oder zu kalt:** Die normale Position, wenn keine Sonnenschutz nötig ist.
-- **Position bei bewölktem Wetter:** Die Position bei bewölktem Wetter. Meistens `0` (ganz oben).
-- **Abend-Position:** Die Position, auf die die Rollläden abends herunterfahren.
+In diesem Blueprint gilt folgende Logik:
 
-Hinweis: Bei vielen Rollläden bedeutet `0` = oben (geöffnet) und `100` = unten (geschlossen).
+- **100 %** = Rollladen komplett offen
+- **0 %** = Rollladen komplett geschlossen
+
+- **Position bei Sonne im Winkel & warm:** Sonnenschutz-Position, wenn die Sonne auf das Fenster scheint und es warm genug ist. Standard: `60 %`.
+- **Position bei Sonne außerhalb oder zu kalt:** Normale Morgen-Position, wenn kein Sonnenschutz nötig ist. Standard: `100 %` (komplett offen).
+- **Position bei bewölktem Wetter:** Position bei bewölktem Wetter. Standard: `100 %` (komplett offen).
+- **Abend-Position:** Position, auf die die Rollläden abends geschlossen werden. Standard: `0 %`.
+
+### Positionen umkehren
+
+Manche Rollläden sind andersherum kalibriert:
+
+- **100 %** = geschlossen
+- **0 %** = offen
+
+Falls das bei dir der Fall ist, aktiviere einfach **„Positionen umkehren“**. Dann werden alle eingestellten Positionen automatisch invertiert, ohne dass du sie neu eingeben musst.
+
+### Ruhemodus
+
+Wenn du möchtest, dass die Rollläden in einer bestimmten Zeit nicht bewegt werden (z. B. nachts), kannst du den **Ruhemodus** aktivieren.
+
+- **Ruhemodus aktivieren:** Schaltet die Funktion ein oder aus.
+- **Ruhemodus Beginn:** Uhrzeit, ab der keine Bewegung mehr erfolgen soll.
+- **Ruhemodus Ende:** Uhrzeit, bis zu der keine Bewegung erfolgen soll.
+
+Der Zeitbereich funktioniert auch über Mitternacht hinweg, zum Beispiel von `22:00` bis `07:00`.
 
 ---
 
@@ -137,25 +160,25 @@ Hinweis: Bei vielen Rollläden bedeutet `0` = oben (geöffnet) und `100` = unten
 
 - Fenster-Ausrichtung: `90`
 - Toleranzwinkel: `45`
-- Position bei Sonne & warm: `30`
+- Position bei Sonne & warm: `40`
 
 ### Südfenster
 
 - Fenster-Ausrichtung: `180`
 - Toleranzwinkel: `45`
-- Position bei Sonne & warm: `40`
+- Position bei Sonne & warm: `50`
 
 ### Westfenster
 
 - Fenster-Ausrichtung: `270`
 - Toleranzwinkel: `45`
-- Position bei Sonne & warm: `30`
+- Position bei Sonne & warm: `40`
 
 ### Nordfenster
 
 - Fenster-Ausrichtung: `0`
 - Toleranzwinkel: `45`
-- Position bei Sonne & warm: `0` (Sonnenschutz meist nicht nötig)
+- Position bei Sonne & warm: `100` (Sonnenschutz meist nicht nötig)
 
 ---
 
@@ -173,7 +196,7 @@ Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benach
 - ob es als bewölkt eingestuft wird
 - ob die Sonne im relevanten Winkel steht
 
-So kannst du prüfen, ob die Automation das richtige Ergebnis liefert, bevor du sie aktiv nutzt.
+So kannst du prüfen, ob die Automation das richtige Ergebnis liefert, bevor du sie aktiv nutzt. Die Benachrichtigung zeigt dabei auch an, ob die Positionen gerade invertiert wurden.
 
 ---
 

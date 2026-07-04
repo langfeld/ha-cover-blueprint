@@ -3,10 +3,14 @@ blueprint:
   description: >
     Steuert eine Gruppe von Rollläden morgens zu einer festen Uhrzeit hoch.
     Die Position hängt dabei vom Wetter (Bewölkung + Temperatur) und vom
-    Sonnenstand (Azimuth) ab. Ist es bewölkt, bleiben die Rollläden oben
+    Sonnenstand (Azimuth) ab. Ist es bewölkt, bleiben die Rollläden offen
     (bzw. auf der bewölkten Position). Steht die Sonne im Toleranzbereich vor
     dem Fenster UND ist es warm genug, wird die Sonnenschutz-Position gefahren.
-    Abends werden die Rollläden bei Sonnenuntergang heruntergefahren.
+    Abends werden die Rollläden bei Sonnenuntergang geschlossen.
+
+    Standard: 100 % = komplett offen, 0 % = komplett geschlossen.
+    Über den Schalter „Positionen umkehren“ kann dies bei Bedarf invertiert
+    werden.
 
     Erstelle für jede Himmelsrichtung/Fenstergruppe eine eigene Automation aus
     diesem Blueprint und passe jeweils Fenster-Ausrichtung und Positionen an.
@@ -41,7 +45,7 @@ blueprint:
         boolean: {}
     enable_evening:
       name: Abends aktivieren
-      description: Soll abends bei Sonnenuntergang heruntergefahren werden?
+      description: Soll abends bei Sonnenuntergang geschlossen werden?
       default: true
       selector:
         boolean: {}
@@ -54,6 +58,35 @@ blueprint:
       default: false
       selector:
         boolean: {}
+    invert_positions:
+      name: Positionen umkehren
+      description: >
+        Standard: 100 % = Rollladen komplett offen, 0 % = komplett geschlossen.
+        Aktiviere diese Option, wenn bei deinen Rollläden 100 % geschlossen und
+        0 % offen bedeutet. Alle Positionen werden dann automatisch invertiert.
+      default: false
+      selector:
+        boolean: {}
+    enable_quiet_mode:
+      name: Ruhemodus aktivieren
+      description: >
+        Wenn aktiviert, werden die Rollläden im eingestellten Zeitbereich nicht
+        bewegt.
+      default: false
+      selector:
+        boolean: {}
+    quiet_start:
+      name: Ruhemodus Beginn
+      description: Uhrzeit, ab der keine Rollladen-Bewegung erfolgen soll.
+      default: "22:00:00"
+      selector:
+        time: {}
+    quiet_end:
+      name: Ruhemodus Ende
+      description: Uhrzeit, bis zu der keine Rollladen-Bewegung erfolgen soll.
+      default: "07:00:00"
+      selector:
+        time: {}
     window_orientation:
       name: Fenster-Ausrichtung (Azimuth)
       description: >
@@ -172,8 +205,10 @@ blueprint:
       name: Position bei Sonne im Winkel & warm
       description: >
         Rollladen-Position, wenn die Sonne im Toleranzbereich steht UND die
-        Temperatur über der Schwelle liegt (Sonnenschutz).
-      default: 40
+        Temperatur über der Schwelle liegt (Sonnenschutz). Standard: 60 %
+        (teilweise geschlossen). 100 % = komplett offen, 0 % = komplett
+        geschlossen.
+      default: 60
       selector:
         number:
           min: 0
@@ -185,8 +220,8 @@ blueprint:
       name: Position bei Sonne außerhalb oder zu kalt
       description: >
         Position, wenn die Sonne NICHT im Toleranzbereich steht oder die
-        Temperatur unter der Schwelle liegt.
-      default: 0
+        Temperatur unter der Schwelle liegt. Standard: 100 % (komplett offen).
+      default: 100
       selector:
         number:
           min: 0
@@ -198,8 +233,8 @@ blueprint:
       name: Position bei bewölktem Wetter
       description: >
         Position, wenn eine der ausgewählten bewölkten Wetterbedingungen aktiv
-        ist. Meistens oben (0 %).
-      default: 0
+        ist. Standard: 100 % (komplett offen).
+      default: 100
       selector:
         number:
           min: 0
@@ -211,7 +246,8 @@ blueprint:
       name: Abend-Position
       description: >
         Position, auf die die Rollläden bei Sonnenuntergang gefahren werden.
-      default: 100
+        Standard: 0 % (komplett geschlossen).
+      default: 0
       selector:
         number:
           min: 0
@@ -240,6 +276,15 @@ action:
             entity_id: !input enable_morning
             state: "on"
         sequence:
+          - if:
+              - condition: state
+                entity_id: !input enable_quiet_mode
+                state: "on"
+              - condition: time
+                after: !input quiet_start
+                before: !input quiet_end
+            then:
+              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               weather: !input weather_entity
@@ -252,6 +297,7 @@ action:
               pos_sunny_in: !input position_sunny_in_angle
               pos_sunny_out: !input position_sunny_outside_angle
               pos_cloudy: !input position_cloudy
+              invert: !input invert_positions
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
               temp: >
@@ -278,6 +324,12 @@ action:
                 {% else %}
                   {{ pos_sunny_out }}
                 {% endif %}
+              final_position: >
+                {% if invert %}
+                  {{ 100 - (target_position | int) }}
+                {% else %}
+                  {{ target_position }}
+                {% endif %}
           - if:
               - condition: state
                 entity_id: !input debug_mode
@@ -287,7 +339,8 @@ action:
                 data:
                   title: "Rollladen-Blueprint: Debug Morgens"
                   message: >
-                    Geplante Position: {{ target_position }}%
+                    Geplante Position: {{ final_position }}%
+                    (Berechnet: {{ target_position }}%, invertiert: {{ invert }})
 
                     Rollläden: {{ covers | join(', ') }}
 
@@ -305,7 +358,7 @@ action:
                 target:
                   entity_id: !input covers
                 data:
-                  position: "{{ target_position }}"
+                  position: "{{ final_position }}"
 
       - conditions:
           - condition: trigger
@@ -314,9 +367,25 @@ action:
             entity_id: !input enable_evening
             state: "on"
         sequence:
+          - if:
+              - condition: state
+                entity_id: !input enable_quiet_mode
+                state: "on"
+              - condition: time
+                after: !input quiet_start
+                before: !input quiet_end
+            then:
+              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               evening_pos: !input evening_position
+              invert: !input invert_positions
+              final_evening_pos: >
+                {% if invert %}
+                  {{ 100 - (evening_pos | int) }}
+                {% else %}
+                  {{ evening_pos }}
+                {% endif %}
           - if:
               - condition: state
                 entity_id: !input debug_mode
@@ -326,7 +395,8 @@ action:
                 data:
                   title: "Rollladen-Blueprint: Debug Abends"
                   message: >
-                    Geplante Position: {{ evening_pos }}%
+                    Geplante Position: {{ final_evening_pos }}%
+                    (Berechnet: {{ evening_pos }}%, invertiert: {{ invert }})
 
                     Rollläden: {{ covers | join(', ') }}
 
@@ -336,4 +406,4 @@ action:
                 target:
                   entity_id: !input covers
                 data:
-                  position: !input evening_position
+                  position: "{{ final_evening_pos }}"
