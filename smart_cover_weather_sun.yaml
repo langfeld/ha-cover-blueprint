@@ -66,12 +66,37 @@ blueprint:
       default: true
       selector:
         boolean: {}
+    manual_trigger_mode:
+      name: "🧪 Manueller Test-Modus"
+      description: >
+        Wenn du die Automation manuell ausführst, wird dieser Wert als
+        simulierter Trigger verwendet. So kannst du den Morgen-Teil, den
+        Intervall-Check oder den Abend-Teil testen. Bei normaler Automation
+        (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert
+        ignoriert.
+      default: "morning"
+      selector:
+        select:
+          options:
+            - label: "🌅 Morgens"
+              value: "morning"
+            - label: "🔄 Neubewertung (Intervall)"
+              value: "reevaluate"
+            - label: "🌙 Abends"
+              value: "evening"
+          multiple: false
+          mode: dropdown
     debug_mode:
       name: "🐞 Debug-Modus"
       description: >
         Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
         Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
         erstellt. Ideal zum Testen, bevor die Rollläden wirklich fahren.
+
+        Hinweis: Wenn du den Debug-Modus manuell testest, muss der entsprechende
+        Schalter (z. B. „🌄 Morgens aktivieren“ oder „🌇 Abends aktivieren“)
+        eingeschaltet sein. Über „🧪 Manueller Test-Modus“ wählst du aus, welcher
+        Teil simuliert wird.
       default: false
       selector:
         boolean: {}
@@ -356,6 +381,7 @@ variables:
   quiet_end: !input quiet_end
   enable_reevaluation: !input enable_reevaluation
   reevaluate_interval: !input reevaluate_interval
+  manual_trigger_mode: !input manual_trigger_mode
 
 trigger:
   - platform: time
@@ -397,11 +423,10 @@ action:
       - conditions:
           - condition: template
             value_template: >-
-              {% set tid = trigger.id | default('morning') %}
+              {% set tid = trigger.id | default(manual_trigger_mode) %}
               {{ (tid == 'morning' and (enable_morning | bool))
-                 or (tid == 'reevaluate_15' and (enable_reevaluation | bool) and reevaluate_interval == '15')
-                 or (tid == 'reevaluate_30' and (enable_reevaluation | bool) and reevaluate_interval == '30')
-                 or (tid == 'reevaluate_60' and (enable_reevaluation | bool) and reevaluate_interval == '60') }}
+                 or (tid in ['reevaluate_15', 'reevaluate_30', 'reevaluate_60'] and (enable_reevaluation | bool) and reevaluate_interval == (tid.split('_')[1]))
+                 or (tid == 'reevaluate' and (enable_reevaluation | bool)) }}
         sequence:
           - variables:
               covers: !input covers
@@ -506,10 +531,10 @@ action:
                       position: "{{ final_position }}"
 
       - conditions:
-          - condition: trigger
-            id: evening
           - condition: template
-            value_template: "{{ enable_evening | bool }}"
+            value_template: >-
+              {% set tid = trigger.id | default(manual_trigger_mode) %}
+              {{ tid == 'evening' and (enable_evening | bool) }}
         sequence:
           - variables:
               covers: !input covers

@@ -214,6 +214,18 @@ Der Zeitbereich funktioniert auch über Mitternacht hinweg, zum Beispiel von `22
 
 ---
 
+## Manueller Test-Modus
+
+Diese Einstellung wird nur verwendet, wenn du die Automation manuell ausführst. Sie legt fest, welcher Teil der Automation simuliert werden soll:
+
+- **Morgens** – simuliert den morgendlichen Hochfahr-Trigger
+- **Neubewertung (Intervall)** – simuliert einen regelmäßigen Intervall-Check tagsüber
+- **Abends** – simuliert den Sonnenuntergang-Trigger
+
+Bei normaler Automation (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert ignoriert.
+
+---
+
 ## Debug-Modus
 
 Bevor du die Rollläden wirklich fahren lässt, kannst du den **Debug-Modus** einschalten.
@@ -222,6 +234,8 @@ Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benach
 
 - die geplante Position
 - die betroffenen Rollläden
+- die aktuelle durchschnittliche Position
+- ob eine Bewegung nötig wäre
 - den aktuellen Azimuth und die Elevation
 - die aktuelle Temperatur
 - den Wetterzustand
@@ -229,6 +243,12 @@ Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benach
 - ob die Sonne im relevanten Winkel steht
 
 So kannst du prüfen, ob die Automation das richtige Ergebnis liefert, bevor du sie aktiv nutzt. Die Benachrichtigung zeigt dabei auch an, ob die Positionen gerade invertiert wurden.
+
+**Hinweis:** Wenn du den Debug-Modus manuell testest (indem du die Automation manuell ausführst), muss der entsprechende Schalter (z. B. **„Morgens aktivieren“** oder **„Abends aktivieren“**) eingeschaltet sein. Über **„Manueller Test-Modus“** wählst du aus, welcher Teil simuliert werden soll:
+
+- **Morgens** – simuliert den morgendlichen Hochfahr-Trigger
+- **Neubewertung (Intervall)** – simuliert einen regelmäßigen Intervall-Check tagsüber
+- **Abends** – simuliert den Sonnenuntergang-Trigger
 
 ---
 
