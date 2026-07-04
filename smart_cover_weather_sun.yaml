@@ -1,97 +1,119 @@
 blueprint:
   name: "Smarte Rollladensteuerung mit Wetter & Sonnenstand"
   description: >
-    Steuert eine Gruppe von Rollläden morgens zu einer festen Uhrzeit hoch.
-    Die Position hängt dabei vom Wetter (Bewölkung + Temperatur) und vom
-    Sonnenstand (Azimuth) ab. Ist es bewölkt, bleiben die Rollläden offen
-    (bzw. auf der bewölkten Position). Steht die Sonne im Toleranzbereich vor
-    dem Fenster UND ist es warm genug, wird die Sonnenschutz-Position gefahren.
-    Abends werden die Rollläden bei Sonnenuntergang geschlossen.
+    Steuert eine Gruppe von Rollläden automatisch nach Wettervorhersage und
+    Sonnenstand.
+
+    Morgens fahren die Rollläden zu einer festen Uhrzeit hoch. Die Höhe hängt
+    dabei vom Wetter (Bewölkung), der aktuellen oder vorhergesagten Temperatur
+    und der Position der Sonne (Azimuth + Elevation) ab. Ist es bewölkt,
+    bleiben die Rollläden offen. Steht die Sonne im Toleranzbereich vor dem
+    Fenster und ist es warm genug, wird die Sonnenschutz-Position gefahren.
+
+    Tagsüber findet in regelmäßigen Abständen eine Neubewertung statt, damit
+    die Automation auch auf sich ändernde Wetterbedingungen reagiert.
+
+    Abends werden die Rollläden bei Sonnenuntergang geschlossen. Ein
+    konfigurierbarer Ruhemodus verhindert Bewegungen in bestimmten Zeiten.
 
     Standard: 100 % = komplett offen, 0 % = komplett geschlossen.
     Über den Schalter „Positionen umkehren“ kann dies bei Bedarf invertiert
     werden.
 
-    Erstelle für jede Himmelsrichtung/Fenstergruppe eine eigene Automation aus
-    diesem Blueprint und passe jeweils Fenster-Ausrichtung und Positionen an.
+    Erstelle für jede Himmelsrichtung oder Fenstergruppe eine eigene
+    Automation aus diesem Blueprint.
   domain: automation
   input:
     covers:
-      name: Rollläden
-      description: Die Rollläden, die gemeinsam gesteuert werden sollen.
+      name: "🪟 Rollläden"
+      description: >
+        Wähle die Rollläden aus, die gemeinsam gesteuert werden sollen. Du kannst
+        hier einzelne Rollläden oder gleich mehrere auswählen.
       selector:
         entity:
           domain: cover
           multiple: true
     weather_entity:
-      name: Wetter-Entity
+      name: "🌤️ Wetter-Entity"
       description: >
-        Home-Assistant-Wetter-Entity (z. B. OpenWeatherMap, Deutscher Wetterdienst
-        o. ä.). Wird für Bewölkung und Temperatur genutzt.
+        Deine Wetter-Integration (z. B. OpenWeatherMap, Deutscher Wetterdienst).
+        Sie liefert den aktuellen Wetterzustand und die Temperatur, die für die
+        Entscheidung genutzt werden.
       selector:
         entity:
           domain: weather
     morning_time:
-      name: Morgendliche Hochfahrzeit
-      description: Uhrzeit, zu der die Rollläden morgens hochfahren.
+      name: "🌅 Morgendliche Hochfahrzeit"
+      description: >
+        Uhrzeit, zu der die Rollläden morgens hochfahren sollen. Zum Beispiel
+        07:00:00.
       default: "07:00:00"
       selector:
         time: {}
     enable_morning:
-      name: Morgens aktivieren
-      description: Soll morgens hochgefahren werden?
+      name: "🌄 Morgens aktivieren"
+      description: >
+        Schalter, ob die Rollläden morgens zur festen Uhrzeit hochfahren sollen.
       default: true
       selector:
         boolean: {}
     enable_evening:
-      name: Abends aktivieren
-      description: Soll abends bei Sonnenuntergang geschlossen werden?
+      name: "🌇 Abends aktivieren"
+      description: >
+        Schalter, ob die Rollläden abends bei Sonnenuntergang geschlossen werden
+        sollen. Falls du eine eigene Abend-Automation nutzt, kannst du diesen
+        Schalter ausschalten.
       default: true
       selector:
         boolean: {}
     debug_mode:
-      name: Debug-Modus
+      name: "🐞 Debug-Modus"
       description: >
         Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
         Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
-        erstellt.
+        erstellt. Ideal zum Testen, bevor die Rollläden wirklich fahren.
       default: false
       selector:
         boolean: {}
     invert_positions:
-      name: Positionen umkehren
+      name: "🔄 Positionen umkehren"
       description: >
-        Standard: 100 % = Rollladen komplett offen, 0 % = komplett geschlossen.
-        Aktiviere diese Option, wenn bei deinen Rollläden 100 % geschlossen und
-        0 % offen bedeutet. Alle Positionen werden dann automatisch invertiert.
+        Standard in diesem Blueprint: 100 % = Rollladen komplett offen,
+        0 % = komplett geschlossen. Aktiviere diese Option, wenn bei deinen
+        Rollläden 100 % geschlossen und 0 % offen bedeutet. Alle eingestellten
+        Positionen werden dann automatisch invertiert.
       default: false
       selector:
         boolean: {}
     enable_quiet_mode:
-      name: Ruhemodus aktivieren
+      name: "🔇 Ruhemodus aktivieren"
       description: >
-        Wenn aktiviert, werden die Rollläden im eingestellten Zeitbereich nicht
-        bewegt.
+        Wenn aktiviert, werden die Rollläden im eingestellten Zeitraum nicht
+        bewegt. Praktisch z. B. für die Nachtruhe.
       default: false
       selector:
         boolean: {}
     quiet_start:
-      name: Ruhemodus Beginn
-      description: Uhrzeit, ab der keine Rollladen-Bewegung erfolgen soll.
+      name: "🔇 Ruhemodus Beginn"
+      description: >
+        Uhrzeit, ab der keine Rollladen-Bewegung mehr erfolgen soll. Der Zeitraum
+        funktioniert auch über Mitternacht hinweg.
       default: "22:00:00"
       selector:
         time: {}
     quiet_end:
-      name: Ruhemodus Ende
-      description: Uhrzeit, bis zu der keine Rollladen-Bewegung erfolgen soll.
+      name: "🔇 Ruhemodus Ende"
+      description: >
+        Uhrzeit, bis zu der keine Rollladen-Bewegung erfolgen soll.
       default: "07:00:00"
       selector:
         time: {}
     window_orientation:
-      name: Fenster-Ausrichtung (Azimuth)
+      name: "🧭 Fenster-Ausrichtung (Azimuth)"
       description: >
-        Himmelsrichtung, in die die Fenster zeigen.
+        Himmelsrichtung, in die die Fenster zeigen. In Home Assistant gilt:
         0° = Nord, 90° = Ost, 180° = Süd, 270° = West.
+        Beispiel: Ein Südfenster erhält den Wert 180.
       default: 180
       selector:
         number:
@@ -101,10 +123,12 @@ blueprint:
           unit_of_measurement: "°"
           mode: slider
     sun_angle_tolerance:
-      name: Toleranzwinkel links/rechts
+      name: "📐 Toleranzwinkel links/rechts"
       description: >
         Abweichung links und rechts der Fenster-Ausrichtung, in der die Sonne
-        noch als "direkt auf das Fenster gerichtet" gilt (z. B. 45°).
+        noch als "direkt auf das Fenster gerichtet" gilt. Beispiel: Bei einem
+        Südfenster (180°) und einer Toleranz von 45° gilt die Sonne als
+        zielgerichtet, wenn sie zwischen 135° und 225° steht.
       default: 45
       selector:
         number:
@@ -114,10 +138,13 @@ blueprint:
           unit_of_measurement: "°"
           mode: slider
     min_sun_elevation:
-      name: Minimale Sonnenhöhe (Elevation)
+      name: "☀️ Minimale Sonnenhöhe (Elevation)"
       description: >
         Minimale Sonnenhöhe über dem Horizont, ab der Sonnenschutz aktiv wird.
-        Auf -90° setzen, wenn nur der Azimuth-Winkel berücksichtigt werden soll.
+        Damit wird verhindert, dass der Rollladen schon früh am Morgen oder spät
+        am Abend in die Sonnenschutzposition fährt, wenn die Sonne noch tief
+        steht. Auf -90° setzen, wenn nur der Azimuth-Winkel berücksichtigt
+        werden soll.
       default: 10
       selector:
         number:
@@ -127,9 +154,10 @@ blueprint:
           unit_of_measurement: "°"
           mode: slider
     temp_threshold:
-      name: Temperatur-Schwelle
+      name: "🌡️ Temperatur-Schwelle"
       description: >
-        Temperatur, ab der die Sonnenschutz-Position genutzt wird.
+        Temperatur, ab der die Sonnenschutz-Position genutzt wird. Liegt die
+        Temperatur darunter, wird die normale Hoch-Position genutzt.
       default: 22
       selector:
         number:
@@ -139,20 +167,83 @@ blueprint:
           unit_of_measurement: "°C"
           mode: slider
     temp_source:
-      name: Temperatur-Sensor (optional)
+      name: "🌡️ Aktueller Temperatur-Sensor (optional)"
       description: >
-        Optional: Ein separater Temperatur-Sensor (z. B. Außensensor).
-        Wenn nicht ausgewählt, wird die Temperatur aus dem Wetter-Entity gelesen.
+        Optional: Ein separater Temperatur-Sensor (z. B. Außensensor). Wenn du
+        mehrere Sensoren auswählst, wird der erste verwendet. Wenn nichts
+        ausgewählt ist, wird die Temperatur aus dem Wetter-Entity gelesen.
       default: []
       selector:
         entity:
           device_class: temperature
           multiple: true
-    cloudy_conditions:
-      name: Bewölkte Wetterbedingungen
+    use_forecast_max_temp:
+      name: "📈 Tageshöchsttemperatur verwenden"
       description: >
-        Diese Wetterbedingungen gelten als bewölkt. Bei bewölktem Wetter wird
-        die Position für bewölktes Wetter verwendet.
+        Wenn aktiviert, wird statt der aktuellen Temperatur der Wert des
+        Tageshöchsttemperatur-Sensors verwendet. Damit wird schon morgens auf
+        einen später warmen Tag reagiert, auch wenn es gerade noch kühl ist.
+      default: false
+      selector:
+        boolean: {}
+    temp_forecast_entity:
+      name: "📊 Tageshöchsttemperatur-Sensor (optional)"
+      description: >
+        Sensor, der die vorhergesagte Tageshöchsttemperatur liefert. Wird nur
+        genutzt, wenn „Tageshöchsttemperatur verwenden“ aktiviert ist.
+      default: []
+      selector:
+        entity:
+          device_class: temperature
+          multiple: true
+    enable_reevaluation:
+      name: "🔄 Regelmäßige Neubewertung aktivieren"
+      description: >
+        Wenn aktiviert, wird in dem unten gewählten Intervall geprüft, ob sich
+        die Position aufgrund von Wetter- oder Temperaturänderungen ändern
+        sollte. So reagiert die Automation auch tagsüber auf sich ändernde
+        Bedingungen.
+      default: true
+      selector:
+        boolean: {}
+    reevaluate_interval:
+      name: "⏱️ Neubewertungsintervall"
+      description: >
+        Abstand zwischen den automatischen Neubewertungen. Der Wert wird nur
+        verwendet, wenn die regelmäßige Neubewertung aktiviert ist.
+      default: "30"
+      selector:
+        select:
+          options:
+            - label: "15 Minuten"
+              value: "15"
+            - label: "30 Minuten"
+              value: "30"
+            - label: "60 Minuten"
+              value: "60"
+          multiple: false
+          mode: dropdown
+    min_position_change:
+      name: "↔️ Minimale Positionsänderung"
+      description: >
+        Der Rollladen fährt nur, wenn sich die neue Position um mindestens diesen
+        Wert von der aktuellen durchschnittlichen Position unterscheidet. Damit
+        wird verhindert, dass der Rollladen ständig kleine Korrekturen macht.
+        Auf 0 setzen, um die Prüfung zu deaktivieren.
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    cloudy_conditions:
+      name: "☁️ Bewölkte Wetterbedingungen"
+      description: >
+        Wähle die Wetterzustände aus, die als bewölkt gelten sollen. Bei diesen
+        Zuständen fahren die Rollläden auf die eingestellte bewölkte Position
+        (meistens komplett offen).
       default:
         - cloudy
         - partlycloudy
@@ -203,12 +294,12 @@ blueprint:
           multiple: true
           mode: list
     position_sunny_in_angle:
-      name: Position bei Sonne im Winkel & warm
+      name: "🌞 Position bei Sonne im Winkel & warm"
       description: >
-        Rollladen-Position, wenn die Sonne im Toleranzbereich steht UND die
-        Temperatur über der Schwelle liegt (Sonnenschutz). Standard: 60 %
-        (teilweise geschlossen). 100 % = komplett offen, 0 % = komplett
-        geschlossen.
+        Position, wenn die Sonne im Toleranzbereich steht UND die Temperatur
+        über der Schwelle liegt. Das ist deine Sonnenschutz-Position.
+        Standard: 60 % (teilweise geschlossen).
+        Hinweis: 100 % = komplett offen, 0 % = komplett geschlossen.
       default: 60
       selector:
         number:
@@ -218,7 +309,7 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
     position_sunny_outside_angle:
-      name: Position bei Sonne außerhalb oder zu kalt
+      name: "🌤️ Position bei Sonne außerhalb oder zu kalt"
       description: >
         Position, wenn die Sonne NICHT im Toleranzbereich steht oder die
         Temperatur unter der Schwelle liegt. Standard: 100 % (komplett offen).
@@ -231,7 +322,7 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
     position_cloudy:
-      name: Position bei bewölktem Wetter
+      name: "☁️ Position bei bewölktem Wetter"
       description: >
         Position, wenn eine der ausgewählten bewölkten Wetterbedingungen aktiv
         ist. Standard: 100 % (komplett offen).
@@ -244,7 +335,7 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
     evening_position:
-      name: Abend-Position
+      name: "🌙 Abend-Position"
       description: >
         Position, auf die die Rollläden bei Sonnenuntergang gefahren werden.
         Standard: 0 % (komplett geschlossen).
@@ -263,11 +354,22 @@ variables:
   enable_quiet_mode: !input enable_quiet_mode
   quiet_start: !input quiet_start
   quiet_end: !input quiet_end
+  enable_reevaluation: !input enable_reevaluation
+  reevaluate_interval: !input reevaluate_interval
 
 trigger:
   - platform: time
     at: !input morning_time
     id: morning
+  - platform: time_pattern
+    minutes: "/15"
+    id: reevaluate_15
+  - platform: time_pattern
+    minutes: "/30"
+    id: reevaluate_30
+  - platform: time_pattern
+    minutes: "/60"
+    id: reevaluate_60
   - platform: sun
     event: sunset
     id: evening
@@ -293,10 +395,12 @@ condition:
 action:
   - choose:
       - conditions:
-          - condition: trigger
-            id: morning
           - condition: template
-            value_template: "{{ enable_morning }}"
+            value_template: >-
+              {{ (trigger.id == 'morning' and enable_morning)
+                 or (trigger.id == 'reevaluate_15' and enable_reevaluation and reevaluate_interval == '15')
+                 or (trigger.id == 'reevaluate_30' and enable_reevaluation and reevaluate_interval == '30')
+                 or (trigger.id == 'reevaluate_60' and enable_reevaluation and reevaluate_interval == '60') }}
         sequence:
           - variables:
               covers: !input covers
@@ -306,16 +410,21 @@ action:
               min_elevation: !input min_sun_elevation
               temp_threshold: !input temp_threshold
               temp_source: !input temp_source
+              temp_forecast: !input temp_forecast_entity
+              use_forecast: !input use_forecast_max_temp
               cloudy: !input cloudy_conditions
               pos_sunny_in: !input position_sunny_in_angle
               pos_sunny_out: !input position_sunny_outside_angle
               pos_cloudy: !input position_cloudy
               invert: !input invert_positions
               debug_mode: !input debug_mode
+              min_change: !input min_position_change
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
               temp: >
-                {% if temp_source | length > 0 %}
+                {% if use_forecast and temp_forecast | length > 0 %}
+                  {{ states(temp_forecast[0]) | float(state_attr(weather, 'temperature') | float(0)) }}
+                {% elif temp_source | length > 0 %}
                   {{ states(temp_source[0]) | float(state_attr(weather, 'temperature') | float(0)) }}
                 {% else %}
                   {{ state_attr(weather, 'temperature') | float(0) }}
@@ -344,6 +453,21 @@ action:
                 {% else %}
                   {{ target_position }}
                 {% endif %}
+              current_positions: >
+                {{ expand(covers)
+                   | map(attribute='attributes.current_position')
+                   | map('int', -1)
+                   | select('>=', 0)
+                   | list }}
+              avg_current_position: >
+                {% if current_positions | length > 0 %}
+                  {{ (current_positions | sum / current_positions | length) | int }}
+                {% else %}
+                  -1
+                {% endif %}
+              should_move: >
+                {{ avg_current_position < 0
+                   or (final_position - avg_current_position) | abs >= min_change }}
           - if:
               - condition: template
                 value_template: "{{ debug_mode }}"
@@ -356,6 +480,9 @@ action:
                     (Berechnet: {{ target_position }}%, invertiert: {{ invert }})
 
                     Rollläden: {{ covers | join(', ') }}
+                    Aktuelle durchschnittliche Position: {{ avg_current_position }}%
+                    Bewegung nötig: {{ should_move }}
+                    Auslöser: {{ trigger.id }}
 
                     Auswertung:
                     - Azimuth: {{ azimuth }}°
@@ -367,11 +494,15 @@ action:
                     - Bewölkt: {{ is_cloudy }}
                     - Sonne im Winkel & warm: {{ is_sunny_in_angle }}
             else:
-              - service: cover.set_cover_position
-                target:
-                  entity_id: !input covers
-                data:
-                  position: "{{ final_position }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ should_move }}"
+                then:
+                  - service: cover.set_cover_position
+                    target:
+                      entity_id: !input covers
+                    data:
+                      position: "{{ final_position }}"
 
       - conditions:
           - condition: trigger

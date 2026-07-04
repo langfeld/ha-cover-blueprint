@@ -4,6 +4,8 @@ Dieser Blueprint steuert deine Rollläden automatisch nach Wettervorhersage und 
 
 - **Morgens** fahren die Rollläden zu einer festen Uhrzeit hoch.
 - Je nach Wetter, Temperatur und Sonnenposition wird eine passende Höhe gewählt.
+- Optional wird die **Tageshöchsttemperatur** berücksichtigt, damit schon morgens auf einen später warmen Tag reagiert wird.
+- In regelmäßigen Abständen (wählbar: 15, 30 oder 60 Minuten) findet eine Neubewertung statt, falls sich Wetter oder Temperatur ändern.
 - **Abends** werden die Rollläden bei Sonnenuntergang geschlossen.
 - Im **Ruhemodus** kannst du einen Zeitraum festlegen, in dem die Rollläden nicht bewegt werden.
 - Dank des **Debug-Modus** kannst du erst testen, ohne dass sich die Rollläden wirklich bewegen.
@@ -114,6 +116,36 @@ Beispiel: Bei `22` wird der Sonnenschutz erst ab 22 °C aktiv.
 ### Temperatur-Sensor (optional)
 
 Wenn du einen eigenen Außentemperatur-Sensor hast, kannst du ihn hier auswählen. Falls du mehrere auswählst, wird der erste Sensor verwendet. Wenn du keinen Sensor auswählst, wird die Temperatur aus dem Wetter-Entity gelesen.
+
+### Tageshöchsttemperatur verwenden
+
+Aktiviere diese Option, wenn du einen Sensor hast, der die vorhergesagte Tageshöchsttemperatur liefert. Statt der aktuellen Temperatur wird dann die Tageshöchsttemperatur genutzt.
+
+Das ist besonders sinnvoll, wenn es morgens noch kalt ist, der Tag aber später warm wird. Der Rollladen fährt dann morgens schon in die Sonnenschutz-Position.
+
+### Tageshöchsttemperatur-Sensor (optional)
+
+Wähle hier den Sensor für die vorhergesagte Tageshöchsttemperatur aus. Wird nur verwendet, wenn „Tageshöchsttemperatur verwenden“ aktiviert ist.
+
+### Regelmäßige Neubewertung aktivieren
+
+Wenn aktiviert, wird im gewählten Intervall geprüft, ob sich die Position ändern sollte. So kann die Automation auf Wetteränderungen während des Tages reagieren.
+
+### Neubewertungsintervall
+
+Hier wählst du den Abstand zwischen den automatischen Neubewertungen:
+
+- 15 Minuten
+- 30 Minuten
+- 60 Minuten
+
+Dieser Wert wird nur verwendet, wenn die regelmäßige Neubewertung aktiviert ist.
+
+### Minimale Positionsänderung
+
+Der Rollladen fährt nur, wenn sich die neue Position um mindestens diesen Wert von der aktuellen Position unterscheidet. Damit wird verhindert, dass der Rollladen ständig kleine Korrekturen macht.
+
+Standard: `5 %`.
 
 ### Bewölkte Wetterbedingungen
 
