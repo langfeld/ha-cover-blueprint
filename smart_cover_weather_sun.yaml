@@ -142,11 +142,12 @@ blueprint:
       name: Temperatur-Sensor (optional)
       description: >
         Optional: Ein separater Temperatur-Sensor (z. B. Außensensor).
-        Wenn nicht gesetzt, wird die Temperatur aus dem Wetter-Entity gelesen.
+        Wenn nicht ausgewählt, wird die Temperatur aus dem Wetter-Entity gelesen.
+      default: []
       selector:
         entity:
           device_class: temperature
-          multiple: false
+          multiple: true
     cloudy_conditions:
       name: Bewölkte Wetterbedingungen
       description: >
@@ -301,8 +302,8 @@ action:
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
               temp: >
-                {% if temp_source %}
-                  {{ states(temp_source) | float(state_attr(weather, 'temperature') | float(0)) }}
+                {% if temp_source | length > 0 %}
+                  {{ states(temp_source[0]) | float(state_attr(weather, 'temperature') | float(0)) }}
                 {% else %}
                   {{ state_attr(weather, 'temperature') | float(0) }}
                 {% endif %}

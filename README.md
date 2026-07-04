@@ -113,7 +113,7 @@ Beispiel: Bei `22` wird der Sonnenschutz erst ab 22 °C aktiv.
 
 ### Temperatur-Sensor (optional)
 
-Wenn du einen eigenen Außentemperatur-Sensor hast, kannst du ihn hier auswählen. Sonst wird die Temperatur aus dem Wetter-Entity verwendet.
+Wenn du einen eigenen Außentemperatur-Sensor hast, kannst du ihn hier auswählen. Falls du mehrere auswählst, wird der erste Sensor verwendet. Wenn du keinen Sensor auswählst, wird die Temperatur aus dem Wetter-Entity gelesen.
 
 ### Bewölkte Wetterbedingungen
 
