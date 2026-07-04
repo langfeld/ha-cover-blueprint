@@ -397,10 +397,11 @@ action:
       - conditions:
           - condition: template
             value_template: >-
-              {{ (trigger.id == 'morning' and (enable_morning | bool))
-                 or (trigger.id == 'reevaluate_15' and (enable_reevaluation | bool) and reevaluate_interval == '15')
-                 or (trigger.id == 'reevaluate_30' and (enable_reevaluation | bool) and reevaluate_interval == '30')
-                 or (trigger.id == 'reevaluate_60' and (enable_reevaluation | bool) and reevaluate_interval == '60') }}
+              {% set tid = trigger.id | default('morning') %}
+              {{ (tid == 'morning' and (enable_morning | bool))
+                 or (tid == 'reevaluate_15' and (enable_reevaluation | bool) and reevaluate_interval == '15')
+                 or (tid == 'reevaluate_30' and (enable_reevaluation | bool) and reevaluate_interval == '30')
+                 or (tid == 'reevaluate_60' and (enable_reevaluation | bool) and reevaluate_interval == '60') }}
         sequence:
           - variables:
               covers: !input covers
@@ -482,7 +483,7 @@ action:
                     Rollläden: {{ covers | join(', ') }}
                     Aktuelle durchschnittliche Position: {{ avg_current_position }}%
                     Bewegung nötig: {{ should_move }}
-                    Auslöser: {{ trigger.id }}
+                    Auslöser: {{ trigger.id | default('manual') }}
 
                     Auswertung:
                     - Azimuth: {{ azimuth }}°
@@ -534,7 +535,7 @@ action:
 
                     Rollläden: {{ covers | join(', ') }}
 
-                    Auslöser: {{ trigger.id }}
+                    Auslöser: {{ trigger.id | default('manual') }}
             else:
               - service: cover.set_cover_position
                 target:
