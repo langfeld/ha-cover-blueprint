@@ -377,7 +377,7 @@ trigger:
 condition:
   - condition: template
     value_template: >-
-      {% if not enable_quiet_mode %}
+      {% if not (enable_quiet_mode | bool) %}
         true
       {% else %}
         {% set n = now() %}
@@ -397,10 +397,10 @@ action:
       - conditions:
           - condition: template
             value_template: >-
-              {{ (trigger.id == 'morning' and enable_morning)
-                 or (trigger.id == 'reevaluate_15' and enable_reevaluation and reevaluate_interval == '15')
-                 or (trigger.id == 'reevaluate_30' and enable_reevaluation and reevaluate_interval == '30')
-                 or (trigger.id == 'reevaluate_60' and enable_reevaluation and reevaluate_interval == '60') }}
+              {{ (trigger.id == 'morning' and (enable_morning | bool))
+                 or (trigger.id == 'reevaluate_15' and (enable_reevaluation | bool) and reevaluate_interval == '15')
+                 or (trigger.id == 'reevaluate_30' and (enable_reevaluation | bool) and reevaluate_interval == '30')
+                 or (trigger.id == 'reevaluate_60' and (enable_reevaluation | bool) and reevaluate_interval == '60') }}
         sequence:
           - variables:
               covers: !input covers
@@ -422,7 +422,7 @@ action:
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
               temp: >
-                {% if use_forecast and temp_forecast | length > 0 %}
+                {% if (use_forecast | bool) and temp_forecast | length > 0 %}
                   {{ states(temp_forecast[0]) | float(state_attr(weather, 'temperature') | float(0)) }}
                 {% elif temp_source | length > 0 %}
                   {{ states(temp_source[0]) | float(state_attr(weather, 'temperature') | float(0)) }}
@@ -448,7 +448,7 @@ action:
                   {{ pos_sunny_out }}
                 {% endif %}
               final_position: >
-                {% if invert %}
+                {% if invert | bool %}
                   {{ 100 - (target_position | int) }}
                 {% else %}
                   {{ target_position }}
@@ -470,7 +470,7 @@ action:
                    or (final_position - avg_current_position) | abs >= min_change }}
           - if:
               - condition: template
-                value_template: "{{ debug_mode }}"
+                value_template: "{{ debug_mode | bool }}"
             then:
               - service: persistent_notification.create
                 data:
@@ -496,7 +496,7 @@ action:
             else:
               - if:
                   - condition: template
-                    value_template: "{{ should_move }}"
+                    value_template: "{{ should_move | bool }}"
                 then:
                   - service: cover.set_cover_position
                     target:
@@ -508,7 +508,7 @@ action:
           - condition: trigger
             id: evening
           - condition: template
-            value_template: "{{ enable_evening }}"
+            value_template: "{{ enable_evening | bool }}"
         sequence:
           - variables:
               covers: !input covers
@@ -516,14 +516,14 @@ action:
               invert: !input invert_positions
               debug_mode: !input debug_mode
               final_evening_pos: >
-                {% if invert %}
+                {% if invert | bool %}
                   {{ 100 - (evening_pos | int) }}
                 {% else %}
                   {{ evening_pos }}
                 {% endif %}
           - if:
               - condition: template
-                value_template: "{{ debug_mode }}"
+                value_template: "{{ debug_mode | bool }}"
             then:
               - service: persistent_notification.create
                 data:
