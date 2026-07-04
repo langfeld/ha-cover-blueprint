@@ -1,0 +1,339 @@
+blueprint:
+  name: "Smarte Rollladensteuerung mit Wetter & Sonnenstand"
+  description: >
+    Steuert eine Gruppe von Rollläden morgens zu einer festen Uhrzeit hoch.
+    Die Position hängt dabei vom Wetter (Bewölkung + Temperatur) und vom
+    Sonnenstand (Azimuth) ab. Ist es bewölkt, bleiben die Rollläden oben
+    (bzw. auf der bewölkten Position). Steht die Sonne im Toleranzbereich vor
+    dem Fenster UND ist es warm genug, wird die Sonnenschutz-Position gefahren.
+    Abends werden die Rollläden bei Sonnenuntergang heruntergefahren.
+
+    Erstelle für jede Himmelsrichtung/Fenstergruppe eine eigene Automation aus
+    diesem Blueprint und passe jeweils Fenster-Ausrichtung und Positionen an.
+  domain: automation
+  input:
+    covers:
+      name: Rollläden
+      description: Die Rollläden, die gemeinsam gesteuert werden sollen.
+      selector:
+        entity:
+          domain: cover
+          multiple: true
+    weather_entity:
+      name: Wetter-Entity
+      description: >
+        Home-Assistant-Wetter-Entity (z. B. OpenWeatherMap, Deutscher Wetterdienst
+        o. ä.). Wird für Bewölkung und Temperatur genutzt.
+      selector:
+        entity:
+          domain: weather
+    morning_time:
+      name: Morgendliche Hochfahrzeit
+      description: Uhrzeit, zu der die Rollläden morgens hochfahren.
+      default: "07:00:00"
+      selector:
+        time: {}
+    enable_morning:
+      name: Morgens aktivieren
+      description: Soll morgens hochgefahren werden?
+      default: true
+      selector:
+        boolean: {}
+    enable_evening:
+      name: Abends aktivieren
+      description: Soll abends bei Sonnenuntergang heruntergefahren werden?
+      default: true
+      selector:
+        boolean: {}
+    debug_mode:
+      name: Debug-Modus
+      description: >
+        Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
+        Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
+        erstellt.
+      default: false
+      selector:
+        boolean: {}
+    window_orientation:
+      name: Fenster-Ausrichtung (Azimuth)
+      description: >
+        Himmelsrichtung, in die die Fenster zeigen.
+        0° = Nord, 90° = Ost, 180° = Süd, 270° = West.
+      default: 180
+      selector:
+        number:
+          min: 0
+          max: 360
+          step: 1
+          unit_of_measurement: "°"
+          mode: slider
+    sun_angle_tolerance:
+      name: Toleranzwinkel links/rechts
+      description: >
+        Abweichung links und rechts der Fenster-Ausrichtung, in der die Sonne
+        noch als "direkt auf das Fenster gerichtet" gilt (z. B. 45°).
+      default: 45
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 1
+          unit_of_measurement: "°"
+          mode: slider
+    min_sun_elevation:
+      name: Minimale Sonnenhöhe (Elevation)
+      description: >
+        Minimale Sonnenhöhe über dem Horizont, ab der Sonnenschutz aktiv wird.
+        Auf -90° setzen, wenn nur der Azimuth-Winkel berücksichtigt werden soll.
+      default: 10
+      selector:
+        number:
+          min: -90
+          max: 90
+          step: 1
+          unit_of_measurement: "°"
+          mode: slider
+    temp_threshold:
+      name: Temperatur-Schwelle
+      description: >
+        Temperatur, ab der die Sonnenschutz-Position genutzt wird.
+      default: 22
+      selector:
+        number:
+          min: -20
+          max: 45
+          step: 0.5
+          unit_of_measurement: "°C"
+          mode: slider
+    temp_source:
+      name: Temperatur-Sensor (optional)
+      description: >
+        Optional: Ein separater Temperatur-Sensor (z. B. Außensensor).
+        Wenn nicht gesetzt, wird die Temperatur aus dem Wetter-Entity gelesen.
+      selector:
+        entity:
+          device_class: temperature
+          multiple: false
+    cloudy_conditions:
+      name: Bewölkte Wetterbedingungen
+      description: >
+        Diese Wetterbedingungen gelten als bewölkt. Bei bewölktem Wetter wird
+        die Position für bewölktes Wetter verwendet.
+      default:
+        - cloudy
+        - partlycloudy
+        - fog
+        - rainy
+        - pouring
+        - snowy
+        - snowy-rainy
+        - hail
+        - lightning
+        - lightning-rainy
+        - windy
+        - windy-variant
+        - exceptional
+      selector:
+        select:
+          options:
+            - label: Sonnig
+              value: sunny
+            - label: Klar (Nacht)
+              value: clear-night
+            - label: Teilweise bewölkt
+              value: partlycloudy
+            - label: Bewölkt
+              value: cloudy
+            - label: Nebel
+              value: fog
+            - label: Regen
+              value: rainy
+            - label: Starker Regen
+              value: pouring
+            - label: Schnee
+              value: snowy
+            - label: Schneeregen
+              value: snowy-rainy
+            - label: Hagel
+              value: hail
+            - label: Gewitter
+              value: lightning
+            - label: Gewitter mit Regen
+              value: lightning-rainy
+            - label: Windig
+              value: windy
+            - label: Windig, wechselhaft
+              value: windy-variant
+            - label: Außergewöhnlich
+              value: exceptional
+          multiple: true
+          mode: list
+    position_sunny_in_angle:
+      name: Position bei Sonne im Winkel & warm
+      description: >
+        Rollladen-Position, wenn die Sonne im Toleranzbereich steht UND die
+        Temperatur über der Schwelle liegt (Sonnenschutz).
+      default: 40
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    position_sunny_outside_angle:
+      name: Position bei Sonne außerhalb oder zu kalt
+      description: >
+        Position, wenn die Sonne NICHT im Toleranzbereich steht oder die
+        Temperatur unter der Schwelle liegt.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    position_cloudy:
+      name: Position bei bewölktem Wetter
+      description: >
+        Position, wenn eine der ausgewählten bewölkten Wetterbedingungen aktiv
+        ist. Meistens oben (0 %).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    evening_position:
+      name: Abend-Position
+      description: >
+        Position, auf die die Rollläden bei Sonnenuntergang gefahren werden.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+
+trigger:
+  - platform: time
+    at: !input morning_time
+    id: morning
+  - platform: sun
+    event: sunset
+    id: evening
+    enabled: !input enable_evening
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: morning
+          - condition: state
+            entity_id: !input enable_morning
+            state: "on"
+        sequence:
+          - variables:
+              covers: !input covers
+              weather: !input weather_entity
+              orientation: !input window_orientation
+              tolerance: !input sun_angle_tolerance
+              min_elevation: !input min_sun_elevation
+              temp_threshold: !input temp_threshold
+              temp_source: !input temp_source
+              cloudy: !input cloudy_conditions
+              pos_sunny_in: !input position_sunny_in_angle
+              pos_sunny_out: !input position_sunny_outside_angle
+              pos_cloudy: !input position_cloudy
+              azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
+              elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
+              temp: >
+                {% if temp_source %}
+                  {{ states(temp_source) | float(state_attr(weather, 'temperature') | float(0)) }}
+                {% else %}
+                  {{ state_attr(weather, 'temperature') | float(0) }}
+                {% endif %}
+              condition_now: "{{ states(weather) }}"
+              angle_diff: >
+                {% set d = (azimuth - orientation) % 360 %}
+                {% if d > 180 %}{{ d - 360 }}{% else %}{{ d }}{% endif %}
+              is_cloudy: "{{ condition_now in cloudy }}"
+              is_sunny_in_angle: >
+                {{ not is_cloudy
+                   and (angle_diff | abs <= tolerance)
+                   and (elevation >= min_elevation)
+                   and (temp >= temp_threshold) }}
+              target_position: >
+                {% if is_cloudy %}
+                  {{ pos_cloudy }}
+                {% elif is_sunny_in_angle %}
+                  {{ pos_sunny_in }}
+                {% else %}
+                  {{ pos_sunny_out }}
+                {% endif %}
+          - if:
+              - condition: state
+                entity_id: !input debug_mode
+                state: "on"
+            then:
+              - service: persistent_notification.create
+                data:
+                  title: "Rollladen-Blueprint: Debug Morgens"
+                  message: >
+                    Geplante Position: {{ target_position }}%
+
+                    Rollläden: {{ covers | join(', ') }}
+
+                    Auswertung:
+                    - Azimuth: {{ azimuth }}°
+                    - Fenster-Ausrichtung: {{ orientation }}°
+                    - Abweichung: {{ angle_diff }}°
+                    - Elevation: {{ elevation }}°
+                    - Temperatur: {{ temp }}°C
+                    - Wetterzustand: {{ condition_now }}
+                    - Bewölkt: {{ is_cloudy }}
+                    - Sonne im Winkel & warm: {{ is_sunny_in_angle }}
+            else:
+              - service: cover.set_cover_position
+                target:
+                  entity_id: !input covers
+                data:
+                  position: "{{ target_position }}"
+
+      - conditions:
+          - condition: trigger
+            id: evening
+          - condition: state
+            entity_id: !input enable_evening
+            state: "on"
+        sequence:
+          - variables:
+              covers: !input covers
+              evening_pos: !input evening_position
+          - if:
+              - condition: state
+                entity_id: !input debug_mode
+                state: "on"
+            then:
+              - service: persistent_notification.create
+                data:
+                  title: "Rollladen-Blueprint: Debug Abends"
+                  message: >
+                    Geplante Position: {{ evening_pos }}%
+
+                    Rollläden: {{ covers | join(', ') }}
+
+                    Auslöser: {{ trigger.id }}
+            else:
+              - service: cover.set_cover_position
+                target:
+                  entity_id: !input covers
+                data:
+                  position: !input evening_position
