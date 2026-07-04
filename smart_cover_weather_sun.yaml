@@ -384,6 +384,18 @@ variables:
   enable_reevaluation: !input enable_reevaluation
   reevaluate_interval: !input reevaluate_interval
   manual_trigger_mode: !input manual_trigger_mode
+  debug_mode: !input debug_mode
+  is_quiet_time: >-
+    {% if not (enable_quiet_mode | bool) %}
+      false
+    {% else %}
+      {% set t = now().strftime('%H:%M:%S') %}
+      {% if quiet_start <= quiet_end %}
+        {{ t >= quiet_start and t <= quiet_end }}
+      {% else %}
+        {{ t >= quiet_start or t <= quiet_end }}
+      {% endif %}
+    {% endif %}
 
 trigger:
   - platform: time
@@ -405,20 +417,7 @@ trigger:
 condition:
   - condition: template
     value_template: >-
-      {% if not (enable_quiet_mode | bool) %}
-        true
-      {% else %}
-        {% set n = now() %}
-        {% set start = today_at(quiet_start) %}
-        {% set end = today_at(quiet_end) %}
-        {% if end <= start %}
-          {% set end = end + timedelta(days=1) %}
-        {% endif %}
-        {% if n < start %}
-          {% set n = n + timedelta(days=1) %}
-        {% endif %}
-        {{ n < start or n > end }}
-      {% endif %}
+      {{ not (is_quiet_time | bool) or (debug_mode | bool) }}
 
 action:
   - choose:
@@ -430,6 +429,24 @@ action:
                  or (tid in ['reevaluate_15', 'reevaluate_30', 'reevaluate_60'] and (enable_reevaluation | bool) and reevaluate_interval == (tid.split('_')[1]))
                  or (tid == 'reevaluate' and (enable_reevaluation | bool)) }}
         sequence:
+          - if:
+              - condition: template
+                value_template: "{{ is_quiet_time | bool }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ debug_mode | bool }}"
+                then:
+                  - service: persistent_notification.create
+                    data:
+                      title: "Rollladen-Blueprint: Ruhemodus aktiv"
+                      message: >
+                        Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
+
+                        Der Ruhemodus ist aktiv ({{ quiet_start }} – {{ quiet_end }}).
+                        Es ist aktuell Nacht oder die festgelegte Ruhezeit.
+                        Keine Rollladen-Bewegung ausgeführt.
+              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               weather: !input weather_entity
@@ -445,7 +462,6 @@ action:
               pos_sunny_out: !input position_sunny_outside_angle
               pos_cloudy: !input position_cloudy
               invert: !input invert_positions
-              debug_mode: !input debug_mode
               min_change: !input min_position_change
               azimuth: "{{ state_attr('sun.sun', 'azimuth') | float(0) }}"
               elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
@@ -512,6 +528,7 @@ action:
                     Rollläden: {{ covers | join(', ') }}
                     Aktuelle durchschnittliche Position: {{ avg_current_position }}%
                     Bewegung nötig: {{ should_move }}
+                    Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
 
                     Auswertung:
                     - Azimuth: {{ azimuth }}°
@@ -539,11 +556,28 @@ action:
               {% set tid = trigger.id | default(manual_trigger_mode) %}
               {{ tid == 'evening' and (enable_evening | bool) }}
         sequence:
+          - if:
+              - condition: template
+                value_template: "{{ is_quiet_time | bool }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ debug_mode | bool }}"
+                then:
+                  - service: persistent_notification.create
+                    data:
+                      title: "Rollladen-Blueprint: Ruhemodus aktiv"
+                      message: >
+                        Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
+
+                        Der Ruhemodus ist aktiv ({{ quiet_start }} – {{ quiet_end }}).
+                        Es ist aktuell Nacht oder die festgelegte Ruhezeit.
+                        Keine Rollladen-Bewegung ausgeführt.
+              - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
               evening_pos: !input evening_position
               invert: !input invert_positions
-              debug_mode: !input debug_mode
               final_evening_pos: >
                 {% if invert | bool %}
                   {{ 100 - (evening_pos | int) }}
@@ -563,7 +597,7 @@ action:
 
                     Rollläden: {{ covers | join(', ') }}
 
-                    Auslöser: {{ trigger.id | default('manual') }}
+                    Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
             else:
               - service: cover.set_cover_position
                 target:

@@ -184,6 +184,8 @@ Wenn du möchtest, dass die Rollläden in einer bestimmten Zeit nicht bewegt wer
 
 Der Zeitbereich funktioniert auch über Mitternacht hinweg, zum Beispiel von `22:00` bis `07:00`.
 
+Wenn der Debug-Modus aktiviert ist, erhältst du im Ruhemodus eine Benachrichtigung mit dem Hinweis, dass der Ruhemodus aktiv ist und keine Bewegung erfolgt.
+
 ---
 
 ## Beispiele für verschiedene Himmelsrichtungen
