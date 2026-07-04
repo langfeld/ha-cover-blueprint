@@ -8,7 +8,7 @@ Dieser Blueprint steuert deine Rollläden automatisch nach Wettervorhersage und 
 - In regelmäßigen Abständen (wählbar: 15, 30 oder 60 Minuten) findet eine Neubewertung statt, falls sich Wetter oder Temperatur ändern.
 - **Abends** werden die Rollläden bei Sonnenuntergang geschlossen.
 - Im **Ruhemodus** kannst du einen Zeitraum festlegen, in dem die Rollläden nicht bewegt werden.
-- Dank des **Debug-Modus** kannst du erst testen, ohne dass sich die Rollläden wirklich bewegen.
+- Im **Testmodus** wird nur berechnet, aber nicht bewegt. Die Zielposition kann optional in einem Helper gespeichert werden, um sie über Tage hinweg zu verfolgen.
 
 ---
 
@@ -184,7 +184,7 @@ Wenn du möchtest, dass die Rollläden in einer bestimmten Zeit nicht bewegt wer
 
 Der Zeitbereich funktioniert auch über Mitternacht hinweg, zum Beispiel von `22:00` bis `07:00`.
 
-Wenn der Debug-Modus aktiviert ist, erhältst du im Ruhemodus eine Benachrichtigung mit dem Hinweis, dass der Ruhemodus aktiv ist und keine Bewegung erfolgt.
+Wenn der Entscheidungs-Helper konfiguriert ist, wird im Ruhemodus der Wert `quiet_time` gespeichert.
 
 ---
 
@@ -216,51 +216,49 @@ Wenn der Debug-Modus aktiviert ist, erhältst du im Ruhemodus eine Benachrichtig
 
 ---
 
-## Manueller Test-Modus
+## Testmodus und Helper
 
-Diese Einstellung wird nur verwendet, wenn du die Automation manuell ausführst. Sie legt fest, welcher Teil der Automation simuliert werden soll:
+### Testmodus
 
-- **Morgens** – simuliert den morgendlichen Hochfahr-Trigger
-- **Neubewertung (Intervall)** – simuliert einen regelmäßigen Intervall-Check tagsüber
-- **Abends** – simuliert den Sonnenuntergang-Trigger
+Der **Testmodus** blockiert die Bewegung der Rollläden. Die Automation läuft normal weiter, berechnet die Zielposition und speichert sie optional in den Helpern. So kannst du das Verhalten über mehrere Tage beobachten, ohne dass sich die Rollläden ständig bewegen.
 
-Bei normaler Automation (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert ignoriert.
+### Zielposition-Helper (optional)
 
----
+Wenn du einen `input_number`-Helper auswählst, wird bei jedem Lauf die berechnete Zielposition in diesen Helper geschrieben. Du kannst den Verlauf dann in einem Graphen oder einer Dashboard-Karte anzeigen.
 
-## Debug-Modus
+**So legst du den Helper an:**
 
-Bevor du die Rollläden wirklich fahren lässt, kannst du den **Debug-Modus** einschalten.
+1. Einstellungen → Geräte & Dienste → Helfer
+2. Auf **Hinzufügen** klicken
+3. **Zahl** auswählen
+4. Einen Namen vergeben, z. B. `rollladen_zielposition_buro`
+5. Mindestwert `0`, Höchstwert `100`, Schrittweite `1`
+6. Den Helper im Blueprint unter **„🎯 Zielposition-Helper“** auswählen
 
-Dann bewegen sich die Rollläden **nicht**. Stattdessen erhältst du eine Benachrichtigung in Home Assistant mit folgenden Informationen:
+### Entscheidungs-Helper (optional)
 
-- den auslösenden Trigger (Morgen, Intervall oder Abend)
-- die geplante Position
-- die betroffenen Rollläden
-- die aktuelle durchschnittliche Position
-- ob eine Bewegung nötig wäre
-- den aktuellen Azimuth und die Elevation
-- die aktuelle Temperatur
-- den Wetterzustand
-- ob es als bewölkt eingestuft wird
-- ob die Sonne im relevanten Winkel steht
+Wenn du einen `input_text`-Helper auswählst, wird bei jedem Lauf der Grund für die Zielposition gespeichert. Mögliche Werte:
 
-So kannst du prüfen, ob die Automation das richtige Ergebnis liefert, bevor du sie aktiv nutzt. Die Benachrichtigung zeigt dabei auch an, ob die Positionen gerade invertiert wurden.
+- `cloudy` – bewölktes Wetter
+- `sunny_in_angle` – Sonne im Winkel und warm genug
+- `sunny_outside_angle` – Sonne außerhalb des Winkels oder zu kalt
+- `evening` – abendliches Schließen
+- `quiet_time` – Ruhemodus aktiv
 
-**Hinweis:** Der Morgen-Trigger und der Intervall-Check verwenden dieselbe Berechnungslogik. Der einzige Unterschied ist der Zeitpunkt der Ausführung.
+**So legst du den Helper an:**
 
-**Hinweis:** Wenn du den Debug-Modus manuell testest (indem du die Automation manuell ausführst), muss der entsprechende Schalter (z. B. **„Morgens aktivieren“** oder **„Abends aktivieren“**) eingeschaltet sein. Über **„Manueller Test-Modus“** wählst du aus, welcher Teil simuliert werden soll:
-
-- **Morgens** – simuliert den morgendlichen Hochfahr-Trigger
-- **Neubewertung (Intervall)** – simuliert einen regelmäßigen Intervall-Check tagsüber
-- **Abends** – simuliert den Sonnenuntergang-Trigger
+1. Einstellungen → Geräte & Dienste → Helfer
+2. Auf **Hinzufügen** klicken
+3. **Text** auswählen
+4. Einen Namen vergeben, z. B. `rollladen_entscheidung_buro`
+5. Den Helper im Blueprint unter **„📝 Entscheidungs-Helper“** auswählen
 
 ---
 
 ## Tipps
 
 - Lege für jede Fenstergruppe oder Himmelsrichtung eine eigene Automation aus diesem Blueprint an.
-- Teste im Debug-Modus, bevor du die Rollläden wirklich bewegst.
+- Aktiviere zunächst den **Testmodus** und beobachte die Werte in den Helpern, bevor du die Rollläden wirklich fahren lässt.
 - Passe die Temperatur-Schwelle und die Toleranzwinkel an deine Räume an.
 - Wenn du den Abend-Teil nicht brauchst, schalte einfach **„Abends aktivieren“** aus.
 

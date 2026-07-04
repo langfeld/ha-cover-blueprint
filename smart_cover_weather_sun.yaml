@@ -339,41 +339,43 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
 
-    manual_trigger_mode:
-      name: "🧪 Manueller Test-Modus"
+    test_mode:
+      name: "🧪 Testmodus"
       description: >
-        Wenn du die Automation manuell ausführst, wird dieser Wert als
-        simulierter Trigger verwendet. So kannst du den Morgen-Teil, den
-        Intervall-Check oder den Abend-Teil testen. Bei normaler Automation
-        (durch Zeit-Trigger, Sonnenuntergang oder Intervall) wird dieser Wert
-        ignoriert.
-      default: "morning"
-      selector:
-        select:
-          options:
-            - label: "🌅 Morgens"
-              value: "morning"
-            - label: "🔄 Neubewertung (Intervall)"
-              value: "reevaluate"
-            - label: "🌙 Abends"
-              value: "evening"
-          multiple: false
-          mode: dropdown
-
-    debug_mode:
-      name: "🐞 Debug-Modus"
-      description: >
-        Wenn aktiviert, werden keine Rollläden bewegt. Stattdessen wird eine
-        Benachrichtigung mit der geplanten Position und den Entscheidungsgründen
-        erstellt. Ideal zum Testen, bevor die Rollläden wirklich fahren.
-
-        Hinweis: Wenn du den Debug-Modus manuell testest, muss der entsprechende
-        Schalter (z. B. „🌄 Morgens aktivieren“ oder „🌇 Abends aktivieren“)
-        eingeschaltet sein. Über „🧪 Manueller Test-Modus“ wählst du aus, welcher
-        Teil simuliert wird.
+        Wenn aktiviert, werden die Rollläden nicht bewegt. Die Automation läuft
+        normal, berechnet die Zielposition und speichert sie optional in den
+        unten ausgewählten Helpern. So kannst du das Verhalten über mehrere Tage
+        beobachten, ohne dass sich die Rollläden ständig bewegen.
       default: false
       selector:
         boolean: {}
+
+    target_position_helper:
+      name: "🎯 Zielposition-Helper (optional)"
+      description: >
+        Optional: Ein input_number-Helper, in den die berechnete Zielposition
+        geschrieben wird. Lege ihn vorher an unter:
+        Einstellungen → Geräte & Dienste → Helfer → Zahl.
+        Wenn du mehrere Helper auswählst, wird der erste verwendet.
+      default: []
+      selector:
+        entity:
+          domain: input_number
+          multiple: true
+
+    decision_helper:
+      name: "📝 Entscheidungs-Helper (optional)"
+      description: >
+        Optional: Ein input_text-Helper, in den der Grund für die Zielposition
+        geschrieben wird (z. B. cloudy, sunny_in_angle, sunny_outside_angle,
+        evening, quiet_time). Lege ihn vorher an unter:
+        Einstellungen → Geräte & Dienste → Helfer → Text.
+        Wenn du mehrere Helper auswählst, wird der erste verwendet.
+      default: []
+      selector:
+        entity:
+          domain: input_text
+          multiple: true
 
 variables:
   enable_morning: !input enable_morning
@@ -383,8 +385,9 @@ variables:
   quiet_end: !input quiet_end
   enable_reevaluation: !input enable_reevaluation
   reevaluate_interval: !input reevaluate_interval
-  manual_trigger_mode: !input manual_trigger_mode
-  debug_mode: !input debug_mode
+  test_mode: !input test_mode
+  target_helper: !input target_position_helper
+  decision_helper: !input decision_helper
   is_quiet_time: >-
     {% if not (enable_quiet_mode | bool) %}
       false
@@ -414,17 +417,12 @@ trigger:
     event: sunset
     id: evening
 
-condition:
-  - condition: template
-    value_template: >-
-      {{ not (is_quiet_time | bool) or (debug_mode | bool) }}
-
 action:
   - choose:
       - conditions:
           - condition: template
             value_template: >-
-              {% set tid = trigger.id | default(manual_trigger_mode) %}
+              {% set tid = trigger.id | default('morning') %}
               {{ (tid == 'morning' and (enable_morning | bool))
                  or (tid in ['reevaluate_15', 'reevaluate_30', 'reevaluate_60'] and (enable_reevaluation | bool) and reevaluate_interval == (tid.split('_')[1]))
                  or (tid == 'reevaluate' and (enable_reevaluation | bool)) }}
@@ -435,17 +433,13 @@ action:
             then:
               - if:
                   - condition: template
-                    value_template: "{{ debug_mode | bool }}"
+                    value_template: "{{ decision_helper | length > 0 }}"
                 then:
-                  - service: persistent_notification.create
+                  - service: input_text.set_value
+                    target:
+                      entity_id: "{{ decision_helper[0] }}"
                     data:
-                      title: "Rollladen-Blueprint: Ruhemodus aktiv"
-                      message: >
-                        Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
-
-                        Der Ruhemodus ist aktiv ({{ quiet_start }} – {{ quiet_end }}).
-                        Es ist aktuell Nacht oder die festgelegte Ruhezeit.
-                        Keine Rollladen-Bewegung ausgeführt.
+                      value: "quiet_time"
               - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
@@ -512,48 +506,46 @@ action:
               should_move: >
                 {{ avg_current_position < 0
                    or (final_position - avg_current_position) | abs >= min_change }}
+              decision_reason: >
+                {% if is_cloudy %}
+                  cloudy
+                {% elif is_sunny_in_angle %}
+                  sunny_in_angle
+                {% else %}
+                  sunny_outside_angle
+                {% endif %}
           - if:
               - condition: template
-                value_template: "{{ debug_mode | bool }}"
+                value_template: "{{ target_helper | length > 0 }}"
             then:
-              - service: persistent_notification.create
+              - service: input_number.set_value
+                target:
+                  entity_id: "{{ target_helper[0] }}"
                 data:
-                  title: "Rollladen-Blueprint: Debug Tages-Positionierung"
-                  message: >
-                    Auslöser: {{ trigger.id | default('manual') }}
-
-                    Geplante Position: {{ final_position }}%
-                    (Berechnet: {{ target_position }}%, invertiert: {{ invert }})
-
-                    Rollläden: {{ covers | join(', ') }}
-                    Aktuelle durchschnittliche Position: {{ avg_current_position }}%
-                    Bewegung nötig: {{ should_move }}
-                    Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
-
-                    Auswertung:
-                    - Azimuth: {{ azimuth }}°
-                    - Fenster-Ausrichtung: {{ orientation }}°
-                    - Abweichung: {{ angle_diff }}°
-                    - Elevation: {{ elevation }}°
-                    - Temperatur: {{ temp }}°C
-                    - Wetterzustand: {{ condition_now }}
-                    - Bewölkt: {{ is_cloudy }}
-                    - Sonne im Winkel & warm: {{ is_sunny_in_angle }}
-            else:
-              - if:
-                  - condition: template
-                    value_template: "{{ should_move | bool }}"
-                then:
-                  - service: cover.set_cover_position
-                    target:
-                      entity_id: !input covers
-                    data:
-                      position: "{{ final_position }}"
+                  value: "{{ final_position }}"
+          - if:
+              - condition: template
+                value_template: "{{ decision_helper | length > 0 }}"
+            then:
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ decision_helper[0] }}"
+                data:
+                  value: "{{ decision_reason }}"
+          - if:
+              - condition: template
+                value_template: "{{ (should_move | bool) and not (test_mode | bool) }}"
+            then:
+              - service: cover.set_cover_position
+                target:
+                  entity_id: !input covers
+                data:
+                  position: "{{ final_position }}"
 
       - conditions:
           - condition: template
             value_template: >-
-              {% set tid = trigger.id | default(manual_trigger_mode) %}
+              {% set tid = trigger.id | default('morning') %}
               {{ tid == 'evening' and (enable_evening | bool) }}
         sequence:
           - if:
@@ -562,17 +554,13 @@ action:
             then:
               - if:
                   - condition: template
-                    value_template: "{{ debug_mode | bool }}"
+                    value_template: "{{ decision_helper | length > 0 }}"
                 then:
-                  - service: persistent_notification.create
+                  - service: input_text.set_value
+                    target:
+                      entity_id: "{{ decision_helper[0] }}"
                     data:
-                      title: "Rollladen-Blueprint: Ruhemodus aktiv"
-                      message: >
-                        Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
-
-                        Der Ruhemodus ist aktiv ({{ quiet_start }} – {{ quiet_end }}).
-                        Es ist aktuell Nacht oder die festgelegte Ruhezeit.
-                        Keine Rollladen-Bewegung ausgeführt.
+                      value: "quiet_time"
               - stop: "Ruhemodus aktiv – keine Aktion ausgeführt."
           - variables:
               covers: !input covers
@@ -584,21 +572,29 @@ action:
                 {% else %}
                   {{ evening_pos }}
                 {% endif %}
+              decision_reason: "evening"
           - if:
               - condition: template
-                value_template: "{{ debug_mode | bool }}"
+                value_template: "{{ target_helper | length > 0 }}"
             then:
-              - service: persistent_notification.create
+              - service: input_number.set_value
+                target:
+                  entity_id: "{{ target_helper[0] }}"
                 data:
-                  title: "Rollladen-Blueprint: Debug Abends"
-                  message: >
-                    Geplante Position: {{ final_evening_pos }}%
-                    (Berechnet: {{ evening_pos }}%, invertiert: {{ invert }})
-
-                    Rollläden: {{ covers | join(', ') }}
-
-                    Auslöser: {{ trigger.id | default(manual_trigger_mode) }}
-            else:
+                  value: "{{ final_evening_pos }}"
+          - if:
+              - condition: template
+                value_template: "{{ decision_helper | length > 0 }}"
+            then:
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ decision_helper[0] }}"
+                data:
+                  value: "{{ decision_reason }}"
+          - if:
+              - condition: template
+                value_template: "{{ not (test_mode | bool) }}"
+            then:
               - service: cover.set_cover_position
                 target:
                   entity_id: !input covers
