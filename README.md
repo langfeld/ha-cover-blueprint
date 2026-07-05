@@ -186,6 +186,15 @@ Der Zeitbereich funktioniert auch über Mitternacht hinweg, zum Beispiel von `22
 
 Wenn der Entscheidungs-Helper konfiguriert ist, wird im Ruhemodus der Wert `quiet_time` gespeichert.
 
+### Pause nach manueller Bedienung
+
+Diese Option verhindert, dass der Intervall-Check eine gerade manuell eingestellte Position sofort wieder überschreibt.
+
+- **⏸️ Pause nach manueller Bedienung:** Schaltet die Funktion ein oder aus.
+- **⏸️ Dauer der manuellen Pause:** Zeit in Minuten, für die nach einer manuellen Bedienung pausiert wird.
+
+Wenn eines der Rollläden in diesem Zeitraum manuell bewegt wurde, stoppt die Automation. Im Entscheidungs-Helper wird dann der Wert `manual_activity_pause` gespeichert.
+
 ---
 
 ## Beispiele für verschiedene Himmelsrichtungen

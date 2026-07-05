@@ -229,6 +229,28 @@ blueprint:
           step: 1
           unit_of_measurement: "%"
           mode: slider
+    enable_manual_activity_pause:
+      name: "⏸️ Pause nach manueller Bedienung"
+      description: >
+        Wenn aktiviert, wird die Automation gestoppt, wenn eines der Rollläden
+        in der unten eingestellten Zeit manuell bewegt wurde. So verhindert man,
+        dass der Intervall-Check eine manuelle Einstellung sofort überschreibt.
+      default: true
+      selector:
+        boolean: {}
+    manual_activity_duration:
+      name: "⏸️ Dauer der manuellen Pause"
+      description: >
+        Zeit in Minuten, für die die Automation nach einer manuellen Bedienung
+        pausiert.
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 120
+          step: 1
+          unit_of_measurement: "Min"
+          mode: slider
     cloudy_conditions:
       name: "☁️ Bewölkte Wetterbedingungen"
       description: >
@@ -388,6 +410,8 @@ variables:
   test_mode: !input test_mode
   target_helper: !input target_position_helper
   decision_helper: !input decision_helper
+  enable_manual_activity_pause: !input enable_manual_activity_pause
+  manual_activity_duration: !input manual_activity_duration
   is_quiet_time: >-
     {% if not (enable_quiet_mode | bool) %}
       false
@@ -514,6 +538,13 @@ action:
                 {% else %}
                   sunny_outside_angle
                 {% endif %}
+              manual_activity_detected: >
+                {% if enable_manual_activity_pause | bool %}
+                  {% set duration = timedelta(minutes=manual_activity_duration | int) %}
+                  {{ expand(covers) | selectattr('last_changed', '>', now() - duration) | list | length > 0 }}
+                {% else %}
+                  false
+                {% endif %}
           - if:
               - condition: template
                 value_template: "{{ target_helper | length > 0 }}"
@@ -532,6 +563,20 @@ action:
                   entity_id: "{{ decision_helper[0] }}"
                 data:
                   value: "{{ decision_reason }}"
+          - if:
+              - condition: template
+                value_template: "{{ manual_activity_detected | bool }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ decision_helper | length > 0 }}"
+                then:
+                  - service: input_text.set_value
+                    target:
+                      entity_id: "{{ decision_helper[0] }}"
+                    data:
+                      value: "manual_activity_pause"
+              - stop: "Manuelle Bedienung erkannt – Pause aktiv."
           - if:
               - condition: template
                 value_template: "{{ (should_move | bool) and not (test_mode | bool) }}"
